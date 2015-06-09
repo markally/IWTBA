@@ -33,7 +33,7 @@ def closest_job():
 
     input_tfidf = vectorizer.transform([input_text])
     cos_sims = tfidf_mat.dot(input_tfidf.T) #vects already have unit norm
-    most_sim_job = job_titles[np.argmax(cos_sims)]
+    most_sim_job = job_titles[np.argmax(cos_sims.todense())]
 
     # now return your results
     return 'Approximate job title: %s' % (most_sim_job)
