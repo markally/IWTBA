@@ -1,0 +1,5 @@
+https://github.com/tylertreat/BigQuery-Python
+https://en.wikibooks.org/wiki/Help:Database_download
+http://dumps.wikimedia.org/enwiki/20150602/
+https://meta.wikimedia.org/wiki/Data_dumps
+http://www.mediawiki.org/xml/export-0.10.xsd
