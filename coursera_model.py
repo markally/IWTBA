@@ -19,7 +19,7 @@ def concatenate_text_data(course_dict):
     syllabus = course_dict['courseSyllabus']
     short_desc = course_dict['shortDescription']
     about = course_dict['aboutTheCourse']
-    return " ".join(name, faq, syllabus, short_desc, about)
+    return " ".join([name, faq, syllabus, short_desc, about])
 
 course_id_index = {}
 course_text_list = []
@@ -49,11 +49,12 @@ tfidf_mat = vectorizer.fit_transform(course_text_list)
 feature_mapping = vectorizer.get_feature_names()
 
 def get_top_n_words(course_id, n=5):
-    index_val = course_id_index[course_id]
-    top_n_index = np.argsort(tfidf_mat[index_val, :])[-n:]
-    words = feature_mapping[top_n_index]
-    tfidf_vals = tfidf_mat[index_val, top_n_index]
+    index_val = course_id_index[int(course_id)]
+    top_n_index = np.argsort(tfidf_mat.getrow(index_val).todense())[:, -n:]
+    words = [feature_mapping[i] for i in top_n_index.tolist()[0]]
+    tfidf_vals = tfidf_mat[index_val, top_n_index].data
     return zip(words, tfidf_vals)
+get_top_n_words(index_val)
 
 def get_most_similar_index(input_text, tfidf_mat, vectorizer):
     input_tfidf = vectorizer.transform([input_text])
