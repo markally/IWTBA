@@ -77,7 +77,7 @@ if __name__ == '__main__':
     col = db['categories']
 
     for cat in coursera_mod_cats:
-        url = 'wiki/' + cat
+        url = '/wiki/' + cat
         col.insert(crawl_wiki_page(url, 5))
         time.sleep(1)
 
