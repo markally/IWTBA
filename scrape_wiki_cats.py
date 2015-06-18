@@ -42,41 +42,41 @@ coursera_mod_cats = (
 
 def crawl_wiki_page(url, depth):
     if depth > 0:
-        try:
-            link_dict = {}
-            wiki_link_root = 'https://en.wikipedia.org/'
+        link_dict = {}
+        wiki_link_root = 'https://en.wikipedia.org' #links add /wiki/link-title
 
-            r = requests.get(wiki_link_root + url)
-            soup = BeautifulSoup(r.text)
+        r = requests.get(wiki_link_root + url)
+        soup = BeautifulSoup(r.text)
 
-            #get title
-            title = soup.find('h1', {'id': 'firstHeading'}).text.strip()
+        #get title
+        # title = soup.find('h1', {'id': 'firstHeading'}).text.strip()
 
-            #main text
-            main_body = soup.find('div', {'id': 'mw-content-text'})
+        #main text
+        main_body = soup.find('div', {'id': 'mw-content-text'})
 
-            paras = main_body.find_all('p')
-            links_list = []
-            for x in paras:
-                links_list.extend(x.find_all('a'))
+        paras = main_body.find_all('p')
+        links_list = []
+        for x in paras:
+            links_list.extend(x.find_all('a'))
 
-            print "scraped %s at depth %s" % (url, depth)
-            for link_tag in links_list:
-                next_url = link['href']
+        print "scraped %s at depth %s" % (url, depth)
+        for link_tag in links_list:
+            next_url = link_tag['href']
+            if next_url.startswith('/wiki'):
                 link_dict = {url: crawl_wiki_page(next_url, depth-1)}
+        if link_dict:
             return link_dict
-        except:
-            return ""
+    else:
+        return 'none'
 
 if __name__ == '__main__':
     client = MongoClient()
-    db = client.wikipedia
-    col = db.categories
-
-    first_url_root = 'https://en.wikipedia.org/wiki/'
+    db = client['wikipedia']
+    col = db['categories']
 
     for cat in coursera_mod_cats:
-        col.insert(crawl_wiki_page(first_url_root + cat, 5))
+        url = 'wiki/' + cat
+        col.insert(crawl_wiki_page(url, 5))
 
 
 
