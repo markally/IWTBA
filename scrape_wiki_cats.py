@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup 
 from pymongo import MongoClient
+import time
 
 coursera_mod_cats = (
     'arts',
@@ -45,6 +46,7 @@ def crawl_wiki_page(url, depth):
         link_dict = {}
         wiki_link_root = 'https://en.wikipedia.org' #links add /wiki/link-title
 
+        time.sleep(1)
         r = requests.get(wiki_link_root + url)
         soup = BeautifulSoup(r.text)
 
@@ -77,6 +79,7 @@ if __name__ == '__main__':
     for cat in coursera_mod_cats:
         url = 'wiki/' + cat
         col.insert(crawl_wiki_page(url, 5))
+        time.sleep(1)
 
 
 
