@@ -46,7 +46,7 @@ def crawl_wiki_page(url, depth):
         link_dict = {}
         wiki_link_root = 'https://en.wikipedia.org' #links add /wiki/link-title
 
-        time.sleep(1)
+        # time.sleep(1)
         r = requests.get(wiki_link_root + url)
         soup = BeautifulSoup(r.text)
 
@@ -65,7 +65,7 @@ def crawl_wiki_page(url, depth):
         for link_tag in links_list:
             next_url = link_tag['href']
             if next_url.startswith('/wiki'):
-                link_dict = {url: crawl_wiki_page(next_url, depth-1)}
+                link_dict[next_url.replace('.', '_')] = crawl_wiki_page(next_url, depth-1)
         if link_dict:
             return link_dict
     else:
@@ -75,12 +75,20 @@ if __name__ == '__main__':
     client = MongoClient()
     db = client['wikipedia']
     col = db['categories']
+    url = '/wiki/' + 'mathematics'
+    col.insert({cat: crawl_wiki_page(url, 2)})
+    # for cat in coursera_mod_cats:
+    #     url = '/wiki/' + cat
+    #     col.insert(crawl_wiki_page(url, 5))
+    #     print ""
+    #     print "Fully scraped %s and inserted to Mongo" % cat
+    #     print ""
+    #     time.sleep(1)
 
-    for cat in coursera_mod_cats:
-        url = '/wiki/' + cat
-        col.insert(crawl_wiki_page(url, 5))
-        time.sleep(1)
-
+# cleaning needed
+# Wikipedia: Citation Needed
+# Wikipedia
+# url#anchor key <--- pound signs
 
 
 
