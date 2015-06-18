@@ -64,31 +64,32 @@ def crawl_wiki_page(url, depth):
         print "scraped %s at depth %s" % (url, depth)
         for link_tag in links_list:
             next_url = link_tag['href']
-            if next_url.startswith('/wiki'):
-                link_dict[next_url.replace('.', '_')] = crawl_wiki_page(next_url, depth-1)
+            if next_url.startswith('/wiki/'):
+                # remove /wiki from key
+                # can't have . in mongo keys
+                link_dict[next_url[6:].replace('.', '-')] = crawl_wiki_page(next_url, depth-1)
         if link_dict:
             return link_dict
     else:
-        return 'none'
+        return 'end_search'
 
 if __name__ == '__main__':
     client = MongoClient()
     db = client['wikipedia']
     col = db['categories']
-    url = '/wiki/' + 'mathematics'
-    col.insert({cat: crawl_wiki_page(url, 2)})
-    # for cat in coursera_mod_cats:
-    #     url = '/wiki/' + cat
-    #     col.insert(crawl_wiki_page(url, 5))
-    #     print ""
-    #     print "Fully scraped %s and inserted to Mongo" % cat
-    #     print ""
-    #     time.sleep(1)
+
+    for cat in coursera_mod_cats:
+        url = '/wiki/' + cat
+        col.insert({'category':cat, 'link_tree': crawl_wiki_page(url, 2)})
+        print ""
+        print "Fully scraped %s and inserted to Mongo" % cat
+        print ""
+        time.sleep(1)
 
 # cleaning needed
-# Wikipedia: Citation Needed
-# Wikipedia
-# url#anchor key <--- pound signs
+# Wikipedia:Citation_needed
+# Wikipedia:Weasel_words
+# url#anchor key <--- pound signs as intrapage links
 
 
 
