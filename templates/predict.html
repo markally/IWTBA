@@ -53,6 +53,9 @@
                         <a href="#page-top"></a>
                     </li>
                     <li>
+                        <a class="page-scroll" href="/">home</a>
+                    </li>
+                    <li>
                         <a class="page-scroll" href="#about">About</a>
                     </li>
                     <li>
@@ -74,14 +77,27 @@
             <div class="container">
                 <div class="row">
                     <div class="col-md-8 col-md-offset-2">
-                        <h1 class="brand-heading">{{job}}</h1>
+                        <h1 class="intro-text">Course Recommendations</h1>
+                        <table class="table">
+                            <tr>
+                            {% for i in header %}
+                                <th class="text-center">{{ i }}</th>
+                            {% endfor %}
+                            </tr>
+                            {% for t in table %}
+                                <tr>
+                                    <td><a href={{ t[2] }}>{{ t[0] }}</a></td>
+                                    <td>{{ t[1] }}</td>
+                                </tr>
+                            {% endfor %}
+                        </table>
                         <form role="form" action="/predict" method='POST'>
                             <div class="form-group">
-                                <label for="desc">Job Description:</label>
+                                <label for="desc">I'd Like To Learn...</label>
                                 <textarea class="form-control" rows="3" name="desc" placeholder={{desc}}></textarea>
                             </div>
                             <div>
-                                <button type="button" class"btn btn-primary btn-block">Predict</button>
+                                <button type="button" class"btn btn-primary btn-block">Recommend Courses</button>
                             </div>
                         </form>
                     </div>
