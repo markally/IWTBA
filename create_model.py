@@ -39,6 +39,8 @@ class IWTBA():
         self.ny_jobs_titles = None
         self.git_jobs_titles = None
 
+        self.cat_id_to_name = None
+
     # ----------------
     # Read in Corpus
     # ----------------
@@ -70,14 +72,29 @@ class IWTBA():
                     course_categories.append(course['links'].get('categories', [-1]))
                 i += 1
 
+
         if self.categorizer:
+            # get category list
+            cat_info_list = coursera_courses['linked']['categories']
+            self.cat_id_to_name = {cat['id']:
+                {'name':cat['name'], 'shortName':cat['shortName']} for cat in cat_info_list}
+
             # binarize labels and discard low-count categories    
             mlb = MultiLabelBinarizer()
             course_cats_binarized = mlb.fit_transform(course_categories)
+
             # filter to only tags with > 40 courses
             mask = course_cats_binarized.sum(axis=0) > 40
             course_cats_binarized = course_cats_binarized[:, mask]
             self.course_cats_binarized = course_cats_binarized
+
+            # create dict to get back from masked index, to index, to id
+            label_arr_to_cat_id = {}
+            for i, k in enumerate(mask.nonzero()[0].tolist()):
+                label_arr_to_cat_id[i] = mlb.classes_[k]
+
+            self.label_arr_to_cat_id = label_arr_to_cat_id
+
 
         return course_list, course_text_list, course_id_to_index
 
@@ -203,6 +220,21 @@ class IWTBA():
             url = 'https://www.coursera.org/course/' + course['shortName']
             table.append([name, short_desc, url])
         return table
+
+    def get_job_categories(self, input_text, threshold=.034):
+        """
+        Classify posting and return categories.
+        Threshold of 0.034 corresponds to a .05 false positive rate
+        """
+        vect = self.vectorize(input_text)
+        cat_scores = self.categorizer.decision_function(vect)
+        cat_predictions = cat_scores > threshold
+        cat_names = []
+        for i in cat_predictions.nonzero()[1].tolist():
+            cat_id = self.label_arr_to_cat_id[i]
+            cat_name = self.cat_id_to_name[cat_id]['name']
+            cat_names.append(cat_name)
+        return cat_names
 
 if __name__ == '__main__':
     model = IWTBA()
