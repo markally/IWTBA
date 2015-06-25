@@ -36,10 +36,10 @@ class IWTBA():
 
         self.course_list = None
         self.course_id_to_index = None
-        self.ny_jobs_titles = None
-        self.git_jobs_titles = None
+        self.jobs_titles = None
 
         self.cat_id_to_name = None
+        self.course_cats_binarized = None
 
     # ----------------
     # Read in Corpus
@@ -132,6 +132,7 @@ class IWTBA():
     def get_corpus(self, coursera=True, nyc=True, github=True):
         """collect data sets, return combined corpus and store metadata"""
         combined_text = []
+        job_titles = []
         if coursera:
             course_list, course_text_list, course_id_to_index = self._get_coursera_corpus()
             combined_text += course_text_list
@@ -140,11 +141,13 @@ class IWTBA():
         if nyc:
             ny_jobs_titles, ny_jobs_descriptions = self._get_nyc_corpus()
             combined_text += ny_jobs_descriptions
-            self.ny_jobs_titles = ny_jobs_titles
+            job_titles.extend(ny_jobs_titles)
         if github:
             git_jobs_titles, git_jobs_descriptions = self._get_github_corpus()
             combined_text += git_jobs_descriptions
-            self.git_jobs_titles = git_jobs_titles
+            job_titles.extend(git_jobs_titles)
+        if job_titles:
+            self.job_titles = job_titles
 
         return combined_text
 
@@ -193,6 +196,15 @@ class IWTBA():
     #--------------------
     # Result Functions
     #--------------------
+    def _get_course_sims(self, input_text):
+        """get course similarities."""
+        input_vect = self.vectorize(input_text)
+        c_feat_mat = self.feat_mat[:len(self.course_list), :]
+        cos_sims = np.dot(c_feat_mat, input_vect.T) #nx1 shape
+        if type(cos_sims) != np.ndarray: #tfidf is in sparse format
+            cos_sims = np.array(cos_sims.todense())
+        return cos_sims   
+
     def get_n_most_similar_course_indices(self, input_text, n=5, threshold=.3):
         """get n most similar indices, sorted, from a sparse matrix"""
         input_vect = self.vectorize(input_text)
@@ -221,13 +233,20 @@ class IWTBA():
             table.append([name, short_desc, url])
         return table
 
+    def _get_job_category_scores(self, input_text):
+        """
+        Get decision function results for categorizer.
+        """
+        vect = self.vectorize(input_text)
+        cat_scores = self.categorizer.decision_function(vect)
+        return cat_scores
+
     def get_job_categories(self, input_text, threshold=.034):
         """
         Classify posting and return categories.
         Threshold of 0.034 corresponds to a .05 false positive rate
         """
-        vect = self.vectorize(input_text)
-        cat_scores = self.categorizer.decision_function(vect)
+        cat_scores = self._get_job_category_scores(input_text)
         cat_predictions = cat_scores > threshold
         cat_names = []
         for i in cat_predictions.nonzero()[1].tolist():
@@ -235,6 +254,81 @@ class IWTBA():
             cat_name = self.cat_id_to_name[cat_id]['name']
             cat_names.append(cat_name)
         return cat_names
+
+    def get_n_most_similar_job_indices(self, input_text, n=3, threshold=.3):
+        """get n most similar job indices, sorted"""
+        input_vect = self.vectorize(input_text)
+        c_feat_mat = self.feat_mat[len(self.course_list):, :]
+        cos_sims = np.dot(c_feat_mat, input_vect.T)
+        if type(cos_sims) != np.ndarray: #tfidf is in sparse format
+            cos_sims = np.array(cos_sims.todense())
+        n = min(n, np.sum(cos_sims > threshold)) # return only good courses
+        n = max(n, 1) # return at least 1 course
+        top_n_indices = np.argsort(cos_sims, axis=0)[-1:-(n + 1):-1, 0]
+        return top_n_indices.ravel().tolist()
+
+    def get_job_titles(self, input_text, n=3, threshold=.3):
+        """return titles from indices."""
+        top_n_indices = self.get_n_most_similar_job_indices(input_text, n=n, threshold=threshold)
+        titles = []
+        for i in top_n_indices:
+            job_title = self.job_titles[i]
+            if job_title not in titles:
+                titles.append(job_title)
+        return titles
+
+    def build_recommend_page(self, input_text, thresh=.3):
+        # get n job titles > threshold
+        job_titles = self.get_job_titles(input_text, n=3, threshold=thresh)
+
+        # get and sort course similarities
+        course_sims = self._get_course_sims(input_text) #nx1 shape
+        sorted_sim_indices = course_sims.argsort(axis=0)[::-1, :] #sorted descending
+
+        # get sorted course similarity indices for sims > thresh
+
+        # get category scores for job posting
+        job_cat_scores = self._get_job_category_scores(input_text)
+
+        # get category scores for each recommended course
+        # 1 * job cat score if cat has tag, 0 otherwise
+        course_cat_scores = job_cat_scores * self.course_cats_binarized
+
+        # for each course, largest value becomes it's parent category
+        course_parent_cat = np.argmax(course_cat_scores, axis = 1)
+
+        # best recommendations thresholds
+        # get courses with cos sim > high thresh
+        high_thresh = .5
+        best_course_ids = []
+        for course_id in sorted_sim_indices:
+            if course_sims[course_id] > high_thresh:
+                best_course_ids.append(course_id)
+
+        # for each category in job_cat_scores > thresh
+        # create list of courses with sim > thresh
+        good_courses_by_cat_id = {}
+        thresh_mask = (course_sims > thresh).ravel()
+        for i, score in enumerate(job_cat_scores[0]):
+            if score > .034:
+                cat_mask = course_parent_cat == i
+                cat_and_thresh_mask = np.logical_and(cat_mask, thresh_mask)
+                valid_courses = cat_and_thresh_mask.nonzero()[0].tolist()
+                if valid_courses:
+                    good_courses_by_cat_id[i] = valid_courses
+
+        #test by printing stuff
+        print "JOB TITLES"
+        print job_titles
+        print ""
+        print "BEST RECOMMENDATIONS"
+        print [self.course_list[i]['name'] for i in best_course_ids]
+        print ""
+        for k, v in good_courses_by_cat_id.iteritems():
+            print "CATEGORY %s" % self.cat_id_to_name[k]['name']
+            print [self.course_list[i]['name'] for i in v]
+            print ""
+
 
 if __name__ == '__main__':
     model = IWTBA()
