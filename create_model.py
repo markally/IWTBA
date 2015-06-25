@@ -10,6 +10,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 import dill
 from bs4 import BeautifulSoup
 
+from sklearn.decomposition import TruncatedSVD
+from sklearn.svm import SVC
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.preprocessing import MultiLabelBinarizer, Normalizer
+
 class IWTBA():
     def __init__(self):
         # Initialize Tokenizer Parts
@@ -21,6 +26,16 @@ class IWTBA():
 
         # Create stopwords
         self.eng_stop = set(stopwords.words('english'))
+
+        # Placeholders
+        self.feat_mat = None
+        self.svd = None
+        self.feat_labels = None
+
+        self.course_list = None
+        self.course_id_to_index = None
+        self.ny_jobs_titles = None
+        self.git_jobs_titles = None
 
     # ----------------
     # Read in Corpus
@@ -108,40 +123,45 @@ class IWTBA():
         tokenized_desc = [self.stemmer.stem(word) for word in clean_text.split() if word not in self.eng_stop]
         return tokenized_desc
 
-    def fit(self):
-        """fit the vectorizer and store it and the resulting tfidf matrix"""
+    def fit(self, svd=True, svd_comps=1000):
+        """fit the tfidf vectorizer (and svd) and store it and the resulting feature matrix"""
         vectorizer = TfidfVectorizer(tokenizer=self.tokenize_text)
-        tfidf_mat = vectorizer.fit_transform(self.get_corpus())
+        feat_mat = vectorizer.fit_transform(self.get_corpus())
         self.vectorizer = vectorizer
-        self.tfidf_mat = tfidf_mat
+        if svd:
+            self.svd = TruncatedSVD(n_components=svd_comps)
+            feat_mat = self.svd.fit_transform(feat_mat)
+            self.normalizer = Normalizer(copy=False)
+            self.normalizer.transform(feat_mat)
+        self.feat_mat = feat_mat
         self.feat_labels = vectorizer.get_feature_names()
+
+    def vectorize(self, input_text):
+        vector = self.vectorizer.transform([input_text])
+        if self.svd:
+            vector = self.svd.transform(vector)
+            self.normalizer.transform(vector)
+        return vector
 
     #--------------------
     # Result Functions
     #--------------------
-
-    def get_top_n_words(self, index_val, n=5):
-        """return top n words by tfidf value, sorted descending"""
-        top_n_index = np.argsort(self.tfidf_mat.getrow(index_val).todense())[-1:-(n + 1):-1, 0]
-        words = [self.feat_labels[i] for i in top_n_index.tolist()[0]]
-        tfidf_vals = self.tfidf_mat[index_val, top_n_index].data
-        return zip(words, tfidf_vals)
-
-    def get_n_most_similar_indices(self, input_text, n=5):
+    def get_n_most_similar_course_indices(self, input_text, n=5):
         """get n most similar indices, sorted, from a sparse matrix"""
-        input_tfidf = self.vectorizer.transform([input_text])
-        cos_sims_sparse = self.tfidf_mat.dot(input_tfidf.T) #vects already have unit norm
-        n = min(n, cos_sims_sparse.nnz) # only return elements with non-zero similarity
-        cos_sims = cos_sims_sparse.todense() #shape: (m x 1)
+        input_vect = self.vectorize(input_text)
+        c_feat_mat = self.feat_mat[:len(self.course_list), :]
+        cos_sims = np.dot(c_feat_mat, input_vect.T)
+        if type(cos_sims) != np.ndarray: #tfidf is in sparse format
+            cos_sims = np.array(cos_sims.todense())
         top_n_indices = np.argsort(cos_sims, axis=0)[-1:-(n + 1):-1, 0]
-        return top_n_indices.ravel().tolist()[0]
+        return top_n_indices.ravel().tolist()
 
     def build_recommend_table(self, input_text, n=5):
         """
         Collect meta data from recommended courses,
         and then return a table for displaying recommendations.
         """
-        indices = self.get_n_most_similar_indices(input_text, n=n)
+        indices = self.get_n_most_similar_course_indices(input_text, n=n)
         header = ['Course Name', 'Course Description']
         table = [header]
         for i in indices:
@@ -156,4 +176,4 @@ if __name__ == '__main__':
     model = IWTBA()
     model.fit()
 
-    dill.dump(model, open("./data/coursera/model.pkl", "wb"), 2)
+    dill.dump(model, open("./data/model.pkl", "wb"), 2)

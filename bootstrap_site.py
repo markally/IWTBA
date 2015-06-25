@@ -5,15 +5,11 @@ app = Flask(__name__)
 
 import pickle
 import numpy as np
+import dill
 
-import coursera_model as cm
-from coursera_model import tokenize_text
+model = dill.load(open('./data/model.pkl'))
 
-tfidf_mat = pickle.load(open("./data/coursera/tfidf_mat.pkl", "rb" ))
-c_course_list = pickle.load(open("./data/coursera/course_list.pkl", "rb" ))
-vectorizer = pickle.load(open("./data/coursera/vectorizer.pkl", "rb" ))
-
-c_tfidf_mat = tfidf_mat[:len(c_course_list), :]
+c_feat_mat = model.feat_mat[:len(model.course_list), :]
 
 # Form page to submit text
 #============================================
@@ -33,7 +29,7 @@ def submission_page():
 def recommend_page():
     # get data from request form, the key is the name you set in your form
     input_text = request.form['desc']
-    table = cm.build_recommend_table(input_text, c_tfidf_mat, vectorizer, c_course_list, n=5)
+    table = model.build_recommend_table(input_text, n=5)
 
     # need to pass last search as well as table
     # table = list of lists, first list is headers the rest are courses
