@@ -28,11 +28,10 @@ class IWTBA():
     def concatenate_coursera_text_data(self, course_dict):
         """helper function for parsing coursera courses"""
         name = course_dict['name']
-        faq = course_dict['faq']
-        syllabus = course_dict['courseSyllabus']
+        syllabus = BeautifulSoup(course_dict['courseSyllabus']).text
         short_desc = course_dict['shortDescription']
-        about = course_dict['aboutTheCourse']
-        return " ".join([name, faq, syllabus, short_desc, about])
+        about = BeautifulSoup(course_dict['aboutTheCourse']).text
+        return " ".join([name, syllabus, short_desc, about])
 
     def _get_coursera_corpus(self):
         """collect coursera course text and metadata"""
@@ -157,4 +156,4 @@ if __name__ == '__main__':
     model = IWTBA()
     model.fit()
 
-    dill.dump(model, open("./data/coursera/model.pkl", "wb"))
+    dill.dump(model, open("./data/coursera/model.pkl", "wb"), 2)
