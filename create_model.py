@@ -16,7 +16,10 @@ from sklearn.multiclass import OneVsRestClassifier
 from sklearn.preprocessing import MultiLabelBinarizer, Normalizer
 
 class IWTBA():
-    def __init__(self):
+    def __init__(self, svd=True, categorizer=True):
+        # Triggers for building models
+        self.svd=svd
+        self.categorizer=categorizer
         # Initialize Tokenizer Parts
         # Create regex pattern
         self.re_pattern = re.compile('[^a-zA-Z]')
@@ -29,7 +32,6 @@ class IWTBA():
 
         # Placeholders
         self.feat_mat = None
-        self.svd = None
         self.feat_labels = None
 
         self.course_list = None
@@ -52,14 +54,30 @@ class IWTBA():
         """collect coursera course text and metadata"""
         with open('./data/coursera/coursera_courses.json') as c_file:
             coursera_courses = json.load(c_file)
-            course_list = coursera_courses['elements']
 
         course_id_to_index = {} # dict to allow reverse searching from id
         course_text_list = []
+        course_list = []
+        course_categories = []
 
-        for i, course in enumerate(coursera_courses['elements']):
-            course_id_to_index[course['id']] = i
-            course_text_list.append(self.concatenate_coursera_text_data(course))
+        i = 0
+        for course in coursera_courses['elements']:
+            if course['language'] == 'en':
+                course_id_to_index[course['id']] = i
+                course_text_list.append(self.concatenate_coursera_text_data(course))
+                course_list.append(course)
+                if self.categorizer:
+                    course_categories.append(course['links'].get('categories', [-1]))
+                i += 1
+
+        if self.categorizer:
+            # binarize labels and discard low-count categories    
+            mlb = MultiLabelBinarizer()
+            course_cats_binarized = mlb.fit_transform(course_categories)
+            # filter to only tags with > 40 courses
+            mask = course_cats_binarized.sum(axis=0) > 40
+            course_cats_binarized = course_cats_binarized[:, mask]
+            self.course_cats_binarized = course_cats_binarized
 
         return course_list, course_text_list, course_id_to_index
 
@@ -123,17 +141,29 @@ class IWTBA():
         tokenized_desc = [self.stemmer.stem(word) for word in clean_text.split() if word not in self.eng_stop]
         return tokenized_desc
 
-    def fit(self, svd=True, svd_comps=1000):
+    def _fit_svd(self, feat_mat, svd_comps):
+        self.svd = TruncatedSVD(n_components=svd_comps)
+        feat_mat = self.svd.fit_transform(feat_mat)
+        self.normalizer = Normalizer(copy=False)
+        self.normalizer.transform(feat_mat)
+        return feat_mat        
+
+    def _fit_categorizer(self):
+        classifier = SVC(kernel='linear', probability=True, class_weight='auto')
+        cat_clf = OneVsRestClassifier(classifier)
+        cat_clf.fit(self.feat_mat[:len(self.course_list), :], self.course_cats_binarized)
+        self.categorizer = cat_clf
+
+    def fit(self, svd_comps=1000):
         """fit the tfidf vectorizer (and svd) and store it and the resulting feature matrix"""
         vectorizer = TfidfVectorizer(tokenizer=self.tokenize_text)
         feat_mat = vectorizer.fit_transform(self.get_corpus())
         self.vectorizer = vectorizer
-        if svd:
-            self.svd = TruncatedSVD(n_components=svd_comps)
-            feat_mat = self.svd.fit_transform(feat_mat)
-            self.normalizer = Normalizer(copy=False)
-            self.normalizer.transform(feat_mat)
+        if self.svd:
+            feat_mat = self._fit_svd(feat_mat, svd_comps)
         self.feat_mat = feat_mat
+        if self.categorizer:
+            self._fit_categorizer()
         self.feat_labels = vectorizer.get_feature_names()
 
     def vectorize(self, input_text):
@@ -146,13 +176,15 @@ class IWTBA():
     #--------------------
     # Result Functions
     #--------------------
-    def get_n_most_similar_course_indices(self, input_text, n=5):
+    def get_n_most_similar_course_indices(self, input_text, n=5, threshold=.3):
         """get n most similar indices, sorted, from a sparse matrix"""
         input_vect = self.vectorize(input_text)
         c_feat_mat = self.feat_mat[:len(self.course_list), :]
         cos_sims = np.dot(c_feat_mat, input_vect.T)
         if type(cos_sims) != np.ndarray: #tfidf is in sparse format
             cos_sims = np.array(cos_sims.todense())
+        n = min(n, np.sum(cos_sims > threshold)) # return only good courses
+        n = max(n, 1) # return at least 1 course
         top_n_indices = np.argsort(cos_sims, axis=0)[-1:-(n + 1):-1, 0]
         return top_n_indices.ravel().tolist()
 
