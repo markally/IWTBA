@@ -103,6 +103,7 @@ body {
             {% endif %}
         </div>
         <div class="row">
+            {% if cat_list %}
             <h1> Recommendations by Category </h1>
             {% for cat in cat_list %}
                 <h2>{{ cat[0] }}</h2>
@@ -123,6 +124,7 @@ body {
                     {% endfor %}
                 </table>
             {% endfor %}
+            {% endif %}
         </div>
     </section>
     <!-- Footer -->
