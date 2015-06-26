@@ -40,6 +40,7 @@ class IWTBA():
 
         self.cat_id_to_name = None
         self.course_cats_binarized = None
+        self.label_arr_to_cat_id = None
 
     # ----------------
     # Read in Corpus
@@ -277,6 +278,25 @@ class IWTBA():
                 titles.append(job_title)
         return titles
 
+    def build_course_row(self, course_id):
+        """collect course metadata and build row for recommendation page.
+        Input: Course ID
+        Output: List of strings.
+            Course IMG as url
+            Course Title
+            Course URL
+            Course Description
+            Course Categories
+        """
+        course = self.course_list[course_id]
+        c_name = course['name']
+        c_img = course['smallIcon']
+        #url works for coursera only
+        c_url = 'https://www.coursera.org/course/' + course['shortName']
+        c_desc = course['shortDescription']
+        c_cats = [self.cat_id_to_name[cat_id]['name'] for cat_id in course['links']['categories']]
+        return c_name, c_img, c_url, c_desc, c_cats
+
     def build_recommend_page(self, input_text, thresh=.3):
         # get n job titles > threshold
         job_titles = self.get_job_titles(input_text, n=3, threshold=thresh)
@@ -304,10 +324,10 @@ class IWTBA():
         for course_id in sorted_sim_indices:
             if course_sims[course_id] > high_thresh:
                 best_course_ids.append(course_id)
-
+                
         # for each category in job_cat_scores > thresh
         # create list of courses with sim > thresh
-        good_courses_by_cat_id = {}
+        good_courses_by_cat_arr_id = {}
         thresh_mask = (course_sims > thresh).ravel()
         for i, score in enumerate(job_cat_scores[0]):
             if score > .034:
@@ -315,20 +335,15 @@ class IWTBA():
                 cat_and_thresh_mask = np.logical_and(cat_mask, thresh_mask)
                 valid_courses = cat_and_thresh_mask.nonzero()[0].tolist()
                 if valid_courses:
-                    good_courses_by_cat_id[i] = valid_courses
+                    good_courses_by_cat_arr_id[i] = valid_courses
 
-        #test by printing stuff
-        print "JOB TITLES"
-        print job_titles
-        print ""
-        print "BEST RECOMMENDATIONS"
-        print [self.course_list[i]['name'] for i in best_course_ids]
-        print ""
-        for k, v in good_courses_by_cat_id.iteritems():
-            print "CATEGORY %s" % self.cat_id_to_name[k]['name']
-            print [self.course_list[i]['name'] for i in v]
-            print ""
+        cat_list = []
+        for k, v in good_courses_by_cat_arr_id.iteritems():
+            cat_id = model.label_arr_to_cat_id[k]
+            cat_name = self.cat_id_to_name[cat_id]['name']
+            cat_list.append([cat_name, v])
 
+        return job_titles, best_course_ids, cat_list
 
 if __name__ == '__main__':
     model = IWTBA()

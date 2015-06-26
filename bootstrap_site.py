@@ -20,20 +20,35 @@ c_feat_mat = model.feat_mat[:len(model.course_list), :]
 def submission_page():
     return render_template('index.html')
 
-# Prediction page
+# Recommendation page
 #============================================
 # create page with a form on it
 
-# recommending
+# Recommending
 @app.route('/recommend', methods=['POST'])
 def recommend_page():
     # get data from request form, the key is the name you set in your form
     input_text = request.form['desc']
-    table = model.build_recommend_table(input_text, n=5)
+    job_titles, best_course_ids, cat_list = model.build_recommend_page(input_text)
+    header = ['', 'Name', 'Description', 'All Categories']
+
+    best_course_list = [model.build_course_row(c_id) for c_id in best_course_ids]
+
+    cat_list_course_info = []
+    for cat in cat_list:
+        course_info = [model.build_course_row(c_id) for c_id in cat[1]]
+        cat_list_course_info.append([cat[0], course_info])
 
     # need to pass last search as well as table
     # table = list of lists, first list is headers the rest are courses
-    return render_template('recommend.html', desc=input_text, header=table[0], table=table[1:])
+    return render_template(
+        'recommend.html',
+        desc=input_text,
+        titles=job_titles,
+        best_courses=best_course_list,
+        cat_list=cat_list_course_info,
+        header=header)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=6543, debug=True)
+
