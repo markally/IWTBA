@@ -297,7 +297,7 @@ class IWTBA():
         c_cats = [self.cat_id_to_name[cat_id]['name'] for cat_id in course['links']['categories']]
         return c_name, c_img, c_url, c_desc, c_cats
 
-    def build_recommend_page(self, input_text, thresh=.3):
+    def build_recommend_page(self, input_text, thresh=.2):
         # get n job titles > threshold
         job_titles = self.get_job_titles(input_text, n=3, threshold=thresh)
 
@@ -319,7 +319,7 @@ class IWTBA():
 
         # best recommendations thresholds
         # get courses with cos sim > high thresh
-        high_thresh = .5
+        high_thresh = .4
         best_course_ids = []
         for course_id in sorted_sim_indices:
             if course_sims[course_id] > high_thresh:
