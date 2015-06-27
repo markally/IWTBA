@@ -29,7 +29,7 @@ def submission_page():
 def recommend_page():
     # get data from request form, the key is the name you set in your form
     input_text = request.form['desc']
-    job_titles, best_course_ids, cat_list = model.build_recommend_page(input_text)
+    job_titles, best_course_ids, cat_list, has_recommendations = model.build_recommend_page(input_text)
     header = ['', 'Name', 'Description', 'All Categories']
 
     best_course_list = [model.build_course_row(c_id) for c_id in best_course_ids]
@@ -47,6 +47,7 @@ def recommend_page():
         titles=job_titles,
         best_courses=best_course_list,
         cat_list=cat_list_course_info,
+        has_recommendations=has_recommendations,
         header=header)
 
 if __name__ == '__main__':

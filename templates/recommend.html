@@ -79,41 +79,23 @@ body {
     </nav>
 
     <section id="recommend" class="container recommend-section text-center">
-        <div class="row">
-            <h3>So You Want To Be A:</h3>
-            <h4>{{ " | ".join(titles) }}</h4>
-            <h1 class="intro-text">Recommendations</h1>
-            {% if best_courses %}
-            <table class="table">
-                <tr>
-                {% for i in header %}
-                    <th class="text-center">{{ i }}</th>
-                {% endfor %}
-                </tr>
-                {% for course in best_courses %}
-                    <!-- {{c_name, c_img, c_url, c_desc, c_cats}} -->
-                    <tr>
-                        <td><img src={{ course[1] }} alt="Course Icon" height="135" width="240"></td>
-                        <td><a href={{ course[2] }}>{{ course[0] }}</a></td>
-                        <td>{{ course[3] }}</td>
-                        <td>{{ ", ".join(course[4]) + "." }}</td>
-                    </tr>
-                {% endfor %}
-            </table>
-            {% endif %}
-        </div>
-        <div class="row">
-            {% if cat_list %}
-            <h1> Recommendations by Category </h1>
-            {% for cat in cat_list %}
-                <h2>{{ cat[0] }}</h2>
+        {% if titles %}
+            <div class="row">
+                <h3>That seems similar to these jobs:</h3>
+                <h4>{{ " | ".join(titles) }}</h4>
+            </div class="row">
+        {% endif %}
+        {% if has_recommendations %}
+            <div class="row">       
+                <h1 class="intro-text">Recommendations</h1>
+                {% if best_courses %}
                 <table class="table">
                     <tr>
                     {% for i in header %}
                         <th class="text-center">{{ i }}</th>
                     {% endfor %}
                     </tr>
-                    {% for course in cat[1] %}
+                    {% for course in best_courses %}
                         <!-- {{c_name, c_img, c_url, c_desc, c_cats}} -->
                         <tr>
                             <td><img src={{ course[1] }} alt="Course Icon" height="135" width="240"></td>
@@ -123,9 +105,38 @@ body {
                         </tr>
                     {% endfor %}
                 </table>
-            {% endfor %}
-            {% endif %}
-        </div>
+                {% endif %}
+            </div>
+            <div class="row">
+                {% if cat_list %}
+                <h1> Recommendations by Category </h1>
+                {% for cat in cat_list %}
+                    <h2>{{ cat[0] }}</h2>
+                    <table class="table">
+                        <tr>
+                        {% for i in header %}
+                            <th class="text-center">{{ i }}</th>
+                        {% endfor %}
+                        </tr>
+                        {% for course in cat[1] %}
+                            <!-- {{c_name, c_img, c_url, c_desc, c_cats}} -->
+                            <tr>
+                                <td><img src={{ course[1] }} alt="Course Icon" height="135" width="240"></td>
+                                <td><a href={{ course[2] }}>{{ course[0] }}</a></td>
+                                <td>{{ course[3] }}</td>
+                                <td>{{ ", ".join(course[4]) + "." }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                {% endfor %}
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="row">
+                <h1>Sorry, we couldn't find any good courses for you.</h1>
+                <h4>There may not be a Coursera course yet for your input.</h4>
+            </div class="row">
+        {% endif %}
     </section>
     <!-- Footer -->
     <footer>

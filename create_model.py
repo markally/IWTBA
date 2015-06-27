@@ -259,8 +259,8 @@ class IWTBA():
     def get_n_most_similar_job_indices(self, input_text, n=3, threshold=.3):
         """get n most similar job indices, sorted"""
         input_vect = self.vectorize(input_text)
-        c_feat_mat = self.feat_mat[len(self.course_list):, :]
-        cos_sims = np.dot(c_feat_mat, input_vect.T)
+        j_feat_mat = self.feat_mat[len(self.course_list):, :]
+        cos_sims = np.dot(j_feat_mat, input_vect.T)
         if type(cos_sims) != np.ndarray: #tfidf is in sparse format
             cos_sims = np.array(cos_sims.todense())
         n = min(n, np.sum(cos_sims > threshold)) # return only good courses
@@ -296,7 +296,7 @@ class IWTBA():
         c_cats = [self.cat_id_to_name[cat_id]['name'] for cat_id in course['links']['categories']]
         return c_name, c_img, c_url, c_desc, c_cats
 
-    def build_recommend_page(self, input_text, thresh=.25):
+    def build_recommend_page(self, input_text, thresh=.3):
         have_recommendations = False
 
         # get n job titles > threshold
@@ -321,7 +321,7 @@ class IWTBA():
         # best recommendations thresholds
         # get courses with cos sim > high thresh
         max_best = 3
-        high_thresh = .4
+        high_thresh = .5
         best_course_ids = []
         for course_id in sorted_sim_indices:
             if course_sims[course_id] > high_thresh:
@@ -350,9 +350,9 @@ class IWTBA():
             have_recommendations = True
 
         # if have_recommendations is False and job_indices:
-        #   get weighted vector of sim jobs and redo computation
+        #     job_titles, best_course_ids, cat_list = self._rec_from_jobs_only(input_text)
 
-        return job_titles, best_course_ids, cat_list
+        return job_titles, best_course_ids, cat_list, have_recommendations
 
 if __name__ == '__main__':
     model = IWTBA()
