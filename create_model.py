@@ -268,9 +268,8 @@ class IWTBA():
         top_n_indices = np.argsort(cos_sims, axis=0)[-1:-(n + 1):-1, 0]
         return top_n_indices.ravel().tolist()
 
-    def get_job_titles(self, input_text, n=3, threshold=.3):
+    def get_job_titles_from_indices(self, top_n_indices):
         """return titles from indices."""
-        top_n_indices = self.get_n_most_similar_job_indices(input_text, n=n, threshold=threshold)
         titles = []
         for i in top_n_indices:
             job_title = self.job_titles[i]
@@ -297,15 +296,17 @@ class IWTBA():
         c_cats = [self.cat_id_to_name[cat_id]['name'] for cat_id in course['links']['categories']]
         return c_name, c_img, c_url, c_desc, c_cats
 
-    def build_recommend_page(self, input_text, thresh=.2):
+    def build_recommend_page(self, input_text, thresh=.25):
+        have_recommendations = False
+
         # get n job titles > threshold
-        job_titles = self.get_job_titles(input_text, n=3, threshold=thresh)
+        job_titles = []
+        job_indices = self.get_n_most_similar_job_indices(input_text, n=3, threshold=thresh)
+        job_titles = self.get_job_titles_from_indices(job_indices)
 
         # get and sort course similarities
         course_sims = self._get_course_sims(input_text) #nx1 shape
         sorted_sim_indices = course_sims.argsort(axis=0)[::-1, :] #sorted descending
-
-        # get sorted course similarity indices for sims > thresh
 
         # get category scores for job posting
         job_cat_scores = self._get_job_category_scores(input_text)
@@ -319,29 +320,37 @@ class IWTBA():
 
         # best recommendations thresholds
         # get courses with cos sim > high thresh
+        max_best = 3
         high_thresh = .4
         best_course_ids = []
         for course_id in sorted_sim_indices:
             if course_sims[course_id] > high_thresh:
                 best_course_ids.append(course_id)
+        if best_course_ids:
+            best_course_ids = best_course_ids[:max_best]
+            have_recommendations = True
                 
         # for each category in job_cat_scores > thresh
         # create list of courses with sim > thresh
-        good_courses_by_cat_arr_id = {}
+        # get course recommendations by category
+        cat_list = []
         thresh_mask = (course_sims > thresh).ravel()
-        for i, score in enumerate(job_cat_scores[0]):
-            if score > .034:
+        for i in np.argsort(job_cat_scores[0]):
+            if job_cat_scores[0][i] > .034:
                 cat_mask = course_parent_cat == i
                 cat_and_thresh_mask = np.logical_and(cat_mask, thresh_mask)
                 valid_courses = cat_and_thresh_mask.nonzero()[0].tolist()
                 if valid_courses:
-                    good_courses_by_cat_arr_id[i] = valid_courses
+                    course_order = np.argsort(course_sims[cat_and_thresh_mask], axis=0)[::-1, :]
+                    cat_id = self.label_arr_to_cat_id[i]
+                    cat_name = self.cat_id_to_name[cat_id]['name']
+                    cat_list.append([cat_name, [valid_courses[i] for i in course_order]])
 
-        cat_list = []
-        for k, v in good_courses_by_cat_arr_id.iteritems():
-            cat_id = model.label_arr_to_cat_id[k]
-            cat_name = self.cat_id_to_name[cat_id]['name']
-            cat_list.append([cat_name, v])
+        if cat_list:
+            have_recommendations = True
+
+        # if have_recommendations is False and job_indices:
+        #   get weighted vector of sim jobs and redo computation
 
         return job_titles, best_course_ids, cat_list
 
