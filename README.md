@@ -22,12 +22,8 @@ Coursera has a [robust API](https://tech.coursera.org/app-platform/catalog/) whi
 #### Jobs
 
 Two sources were used for job listings: Github and the NYC government.
-
-##### Github
-Listings and job titles were scraped from Github jobs using BeautifulSoup. 
-
-##### NYC
-NYC has a JSON data dump of job postings available as part of the open government movement.
+- Github: Listings and job titles were scraped from Github jobs using BeautifulSoup. 
+- NYC: NYC has a JSON data dump of job postings available as part of the open government movement.
 
 ## Model
 The heart of the model is a matrix mapping courses and jobs to the latent topics discovered in both. Cosine similarity is used to find the most similar courses and jobs to a user-inputted job listing.
@@ -55,6 +51,8 @@ The topic classification are used to structure my recommendations. I recommend a
 ## The Webapp
 
 The webapp was built using Flask on a Bootstrap template, and is hosted on AWS EC2. The recommendation page is responsive: headings change or disappear according to which categories I have recommendations for.
+
+You can find the live app at [IWTBA.io](http://www.iwtba.io).
 
 ## Future Extensions
 - Curriculum generation: recommending courses in a specific order.
