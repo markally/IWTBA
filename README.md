@@ -7,9 +7,9 @@ You can find the live app at [IWTBA.io](http://www.iwtba.io).
 
 So you want to learn math, marketing, maybe some statistics. And you're one of the 13+ million people who have chosen to use online resources like [Coursera](https://www.coursera.org/) to get yourself there. Great! Browse away, Coursera is structured to be easy to navigate for searches like that.
 
-But what if you want to be something more specific? You want to be a . That's a little harder. What's more, what if you don't want to be just any data scientist, you want to be [this data scientist](http://www.krux.com/company/join-us/?gnk=job&gni=8a7886654e28c19e014e36414f387156&gns=Indeed) and you've got the job listing to prove it.
+But what if you want to be something more specific? You want to be a programmer. What's more, you don't want to be any programmer, you've found your dream job on [Stack Overflow Careers](http://careers.stackoverflow.com/) and you've got the job listing to prove it.
 
-Put that job posting in to IWTBA and it will return a list of courses you should take, structured and categorized in a way that makes it easy for a user to navigate.
+Put that job listing in to IWTBA and it will return a list of courses you should take, structured and categorized in a way that makes it easy for a user to navigate.
 
 ## Data
 
@@ -39,9 +39,9 @@ These topics have interesting properties, one of which is handling multiple word
 A similarity score is computed between the input and each job and course in the dataset, giving us an unordered bag of likely recommendations.
 
 #### Topic Classification
-A support vector classifier (SVC) is used to score each with one or many of 26 different categories (Math, Engineering, etc.). The model was tuned using coursera course data to have a 40% true positive rate and a 5% false positive rate.
+A support vector classifier (SVC) is used to score each with one or many of 26 different categories (Math, Engineering, etc.). The model was tuned using Coursera course data with category tags as ground truth, and has a cross-validated 40% true positive rate and a 5% false positive rate.
 
-Additionally, I ran the tuned model on each coursera course to determine which of its categories is its *primary* category.
+Additionally, I ran the tuned model on each Coursera course to determine which of its categories is its *primary* category.
 
 #### Job Predictions and Recommendations
 I return the 3 most similar jobs above a minimum threshold as job title predictions. The job title gives the user some insight into what data is driving the recommendations and confidence about those recommendations.
