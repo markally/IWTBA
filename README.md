@@ -31,7 +31,7 @@ The heart of the model is a matrix mapping courses and jobs to the latent topics
 #### Matrix
 1. Job listings and course text data are cleaned and tokenized using stopwords, stemming and regex.
 2. These text documents are converted into a vector space using [TF-IDF](https://en.wikipedia.org/wiki/Tf%E2%80%93idf). TF-IDF is a numeric representation  of text documents that attempts to quantify how import each word is to the document.
-3. The 24,000 dimension TF-IDF matrix is then reduced using [singular value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition] (SVD) to a 1000 dimension matrix. The SVD matrix is comprised of few topics instead of many words.
+3. The 24,000 dimension TF-IDF matrix is then reduced using [singular value decomposition](https://en.wikipedia.org/wiki/Singular_value_decomposition) (SVD) to a 1000 dimension matrix. The SVD matrix is comprised of few topics instead of many words.
 
 These topics have interesting properties, one of which is handling multiple words with similar meanings. A latent topic can encode "programming" and "coding" as related concepts, whereas in TF-IDF each word is a separate feature.
 
